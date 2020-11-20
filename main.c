@@ -31,52 +31,72 @@ typedef enum
 /***************************************************************************
 * Local Functions Prototypes
 ***************************************************************************/
-int main()
+u8 get_cmd_line(u8 *cmd_line)
 {
 	u8 in_char = 0;
-  u8 *cmd_line_ptr = NULL;
   u8 in_size = 0;
   u8 char_a = 0;
   u8 char_t = 0;
-  dsat_cmd_prep_state_enum_type at_cmd_prep_state = DSAT_CMD_PREP_STATE_HUNT;
-  cmd_line_ptr = malloc(DSAT_MAX_LINE_SIZE);
-  //scanf("%s",cmd_line_ptr);
+  u8 *cmd_line_ptr = NULL;
+  
+  cmd_line_ptr = cmd_line;
+ 
   while((in_char = getchar()) != '\n')
   {
     in_size++;
-    if(in_size == 1)
+    if(in_size < DSAT_MAX_LINE_SIZE)
     {
-      char_a = in_char;
-    }
-    else if(in_size == 2)
-    {
-      char_t = in_char;
-    }
-    else if()
-  }
-
-      if(in_char == 'A')
+      if(in_size == 1)
       {
-        putchar(in_char);
-        *cmd_line_ptr++ = in_char;
+        char_a = in_char;
       }
+      else if(in_size == 2)
+      {
+        char_t = in_char;
+      }
+      else 
+      {      
+        if(('A' == UPCASE(char_a))&&('T' == UPCASE(char_t))&&(in_size >= 3))
+        {
+          *cmd_line_ptr++ = in_char;
+        }
+      }
+    }
+  }
+   *cmd_line_ptr = '\n'; 
+   return (in_size-2);
+}
 
-  //in_char = getchar();
-	//putchar(in_char);
+int main()
+{
+  u8 *cmd_line = NULL;
+  u8 cmd_size = 0;
+  u8 cmd_char = 0;
+  dsat_cmd_prep_state_enum_type at_cmd_prep_state = DSAT_CMD_PREP_STATE_HUNT;
 
-	while(cmd_line_ptr != '\n')
+  cmd_line = malloc(DSAT_MAX_LINE_SIZE);
+  if(cmd_line == NULL)
+    return 0;
+
+  cmd_size = get_cmd_line(cmd_line);
+  printf("cmd_line = %s,cmd_size = %d\n",cmd_line,cmd_size);
+
+	while(*cmd_line != '\n')
 	{
-    in_char = *cmd_line_ptr++; 
+    cmd_char = *cmd_line++; 
 
     switch (at_cmd_prep_state)
     {
       case DSAT_CMD_PREP_STATE_HUNT:
-        if(UPCASE(in_char) == 'A')
+        if(UPCASE(cmd_char) == 'A')
         {
           at_cmd_prep_state =  DSAT_CMD_PREP_STATE_FOUND_A;
         }
-	}
-
+        break;
+      default:
+        break;
+	  }
+  }
   return 0;
 }
 
