@@ -10,7 +10,6 @@ int main()
 	
 	in_char = getchar();
 	putchar(in_char);
-  printf("c=%c\n",c);
   return 0;
 }
 
