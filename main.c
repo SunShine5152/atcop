@@ -10,6 +10,13 @@
 ***************************************************************************/
 #define DSAT_MAX_LINE_SIZE 2100
 #define UPCASE( c ) ( ((c) >= 'a' && (c) <= 'z') ? ((c) - 0x20) : (c) )
+/*--------------------------------------------------------------------------
+                Syntax Flags For the AT Command Parser 
+--------------------------------------------------------------------------*/
+#define NA    1                 /*  Name field found      */
+#define EQ    2                 /*  <=> found             */
+#define QU    4                 /*  <?> found             */
+#define AR    8                 /*  Argument field found  */
 /***************************************************************************
 * Types
 ***************************************************************************/
@@ -23,14 +30,13 @@ typedef enum
 
 typedef struct
 {
-  byte *arg[MAX_ARG];
-  uint16  arg_length[MAX_ARG];
-  byte *working_at_line;
-  byte *name;
-  byte *end_of_line;
-  uint8 op;
-  uint16 args_found;
-  dsat_cmd_category_enum_type cmd_category;
+  u8 *arg[MAX_ARG];
+  u16  arg_length[MAX_ARG];
+  u8 *working_at_line;
+  u8 *name;
+  u8 *end_of_line;
+  u8 op;
+  u16 args_found;
 } tokens_struct_type;
 
 /***************************************************************************
@@ -51,9 +57,9 @@ u8 get_cmd_line(u8 *cmd_line)
   u8 char_a = 0;
   u8 char_t = 0;
   u8 *cmd_line_ptr = NULL;
-  
+
   cmd_line_ptr = cmd_line;
- 
+
   while((in_char = getchar()) != '\n')
   {
     in_size++;
@@ -67,8 +73,8 @@ u8 get_cmd_line(u8 *cmd_line)
       {
         char_t = in_char;
       }
-      else 
-      {      
+      else
+      {
         if(('A' == UPCASE(char_a))&&('T' == UPCASE(char_t))&&(in_size >= 3))
         {
           *cmd_line_ptr++ = in_char;
@@ -104,7 +110,7 @@ u8* parse_extended_command( u8* a_ptr, tokens_struct_type* tokens_res )
 
       DS_AT_MSG0_HIGH("***=***");
     }
-    
+
     else if ( c == '?' && (tokens_res->op & (NA|AR)) == NA )
     {
       *working_ptr = '\0';                  /*  Terminate Name  */
@@ -113,13 +119,15 @@ u8* parse_extended_command( u8* a_ptr, tokens_struct_type* tokens_res )
       tokens_res->op |= QU;
       DS_AT_MSG0_HIGH("***?***");
     }
-    
+
     else if ( c != ' ' && c != ';' && tokens_res->op > NA )
     {
       tokens_res->op |=AR;        /*  Argument (or comma) actually found  */
       DS_AT_MSG0_HIGH("***arg or comma***");
     }
 
+    ++working_ptr;
+    ++a_ptr;
   }
 }
 
