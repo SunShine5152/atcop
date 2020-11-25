@@ -4,13 +4,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include "type.h"
-/***************************************************************************
-* Macros
-***************************************************************************/
-#define MAX_ARG 17
-#define MAX_LINE_SIZE 256
-#define UPCASE( c ) ( ((c) >= 'a' && (c) <= 'z') ? ((c) - 0x20) : (c) )
+#include "dsati.h"
+#include "dsatctab.h"
 /*--------------------------------------------------------------------------
                 Syntax Flags For the AT Command Parser 
 --------------------------------------------------------------------------*/
@@ -21,37 +16,18 @@
 /***************************************************************************
 * Types
 ***************************************************************************/
-typedef enum
-{
-  DSAT_CMD_PREP_STATE_HUNT,     /*  Initial:  looking for a or A                      */
-  DSAT_CMD_PREP_STATE_FOUND_A,  /*  Found A, looking for t, T or /                    */
-  DSAT_CMD_PREP_STATE_FOUND_AT, /*  Found AT: filling buffer and processing backspace */
-  DSAT_CMD_PREP_STATE_ERROR     /*  Error!  loop until end of line                    */
-} dsat_cmd_prep_state_enum_type;
-
-typedef struct
-{
-  u8 *arg[MAX_ARG];
-  u16  arg_length[MAX_ARG];
-  u8 *working_at_line;
-  u8 *name;
-  u8 *end_of_line;
-  u8 op;
-  u16 args_found;
-} tokens_struct_type;
 
 /***************************************************************************
 * Extern Variables (Extern 、Global)
 ***************************************************************************/
-static dsat_result_enum_type result_code;
-static u8 *token_line = NULL;
-static u8 *cmd_line = NULL;
-tokens_struct_type token;
-
 
 /***************************************************************************
 * Local Variables (static ,Global)
 ***************************************************************************/
+static dsat_result_enum_type result_code;
+static u8 *token_line = NULL;
+static u8 *cmd_line = NULL;
+static tokens_struct_type token;
 
 /***************************************************************************
 * Local Functions Prototypes
@@ -280,8 +256,11 @@ dsat_result_enum_type atcop_init(void)
   return result_code;
 }
 static void process_at_cmd_line(char * cmd_line_ptr)
-{
+{    
+    dsati_at_cmd_table_entry_type  *array_ptr = NULL;
+    array_ptr = extended_table_entries;
 
+    
 }
 
 
@@ -289,9 +268,7 @@ int main()
 {
   u8 cmd_size = 0;
 
-  atcop_init();
-
-  
+  atcop_init(); 
 
   while(1)
   {

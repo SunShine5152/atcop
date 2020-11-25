@@ -1,11 +1,22 @@
-#ifndef __TYPE_H__
-#define __TYPE_H__
+#ifndef __DSAT_H__
+#define __DSAT_H__
 
-#include<stdio.h>
+
+/***************************************************************************
+* Macros
+***************************************************************************/
+#define MAX_ARG 17
+#define MAX_LINE_SIZE 256
+#define UPCASE( c ) ( ((c) >= 'a' && (c) <= 'z') ? ((c) - 0x20) : (c) )
 
 #define TRUE  1
 #define FALSE 0
 
+//#define NULL ((void*)0)
+
+/***************************************************************************
+* Types
+***************************************************************************/
 typedef unsigned char                     u8;
 typedef signed char                       s8;
 typedef unsigned short                    u16;
@@ -16,7 +27,6 @@ typedef unsigned long long                u64;
 typedef signed long long                  s64;
 typedef float                             f32;
 typedef double                            f64;
-
 
 typedef enum
 {
@@ -37,6 +47,37 @@ typedef enum
   DSAT_CRC_CODE_VOICE = 31,  /* normal voice  */ 
 } dsat_result_enum_type;
 
+typedef enum
+{
+  DSAT_CMD, 
+  DSAT_ONLINE_DATA,
+  DSAT_ONLINE_CMD
+} dsat_mode_enum_type;
+
+
+typedef struct dsati_cmd_struct
+{
+  char *name;
+  dsat_result_enum_type (*proc_func)(void);
+} dsati_cmd_type;
+
+
+typedef struct
+{
+  u8 *arg[MAX_ARG];
+  u16  arg_length[MAX_ARG];
+  u8 *working_at_line;
+  u8 *name;
+  u8 *end_of_line;
+  u8 op;
+  u16 args_found;
+} tokens_struct_type;
+
+typedef struct
+{
+  const dsati_cmd_type *table_ptr;
+  const u16 *table_size;
+} dsati_at_cmd_table_entry_type;
+
 
 #endif
-
