@@ -8,7 +8,8 @@
 /***************************************************************************
 * Macros
 ***************************************************************************/
-#define DSAT_MAX_LINE_SIZE 2100
+#define MAX_ARG 17
+#define MAX_LINE_SIZE 256
 #define UPCASE( c ) ( ((c) >= 'a' && (c) <= 'z') ? ((c) - 0x20) : (c) )
 /*--------------------------------------------------------------------------
                 Syntax Flags For the AT Command Parser 
@@ -42,6 +43,11 @@ typedef struct
 /***************************************************************************
 * Extern Variables (Extern 、Global)
 ***************************************************************************/
+static dsat_result_enum_type result_code;
+static u8 *token_line = NULL;
+static u8 *cmd_line = NULL;
+tokens_struct_type token;
+
 
 /***************************************************************************
 * Local Variables (static ,Global)
@@ -63,7 +69,7 @@ u8 get_cmd_line(u8 *cmd_line)
   while((in_char = getchar()) != '\n')
   {
     in_size++;
-    if(in_size < DSAT_MAX_LINE_SIZE)
+    if(in_size < MAX_LINE_SIZE)
     {
       if(in_size == 1)
       {
@@ -82,15 +88,41 @@ u8 get_cmd_line(u8 *cmd_line)
       }
     }
   }
-  *cmd_line_ptr++ = '\n';
+  //*cmd_line_ptr++ = '\n';
   *cmd_line_ptr = '\0';
   return (in_size-2);
 }
+int trim_string
+(
+   u8 **start   /*  Pointer to beginning of string */
+)
+{
+  u8 *end = *start;
+
+  /* Advance to non-space character */
+  while (*(*start) == ' ')
+  {
+    (*start)++;
+  }
+
+  /* Move to end of string */
+  while (*end != '\0')
+  {
+    (end)++;
+  }
+  /* Backup to non-space character */
+  while ((end >= *start) && *(--end) == ' ') {}
+
+  /* Terminate string after last non-space character */
+  *(++end) = '\0';
+  return (end - *start);
+} /* trim_string */
 
 u8* parse_extended_command( u8* a_ptr, tokens_struct_type* tokens_res )
 {
   u8 c;
   u8* working_ptr = NULL;
+  u8 i = 0;
 
   working_ptr = tokens_res->working_at_line;
   tokens_res->op = 0;
@@ -98,17 +130,25 @@ u8* parse_extended_command( u8* a_ptr, tokens_struct_type* tokens_res )
   tokens_res->args_found = 0;
 
   while ( (c = *a_ptr) != '\0' )
-  {
+  {    
     *working_ptr = c;
-
-    if ( c == '=' && tokens_res->op == NA )
+    printf("111 c=%c\n",c);
+    if ( c != ' ' && c != ';' && tokens_res->op == 0 )
+    {
+      printf("222\n");
+      tokens_res->op = NA;        /*  Start of Name */
+      tokens_res->name = working_ptr;
+      //printf("tokens_res->name = %s,*working_ptr = %c" ,tokens_res->name, *working_ptr);
+    } 
+    #if 1   
+    else if ( c == '=' && tokens_res->op == NA )
     {
       *working_ptr = '\0';                  /*  Terminate Name  */
       tokens_res->arg[0] = working_ptr + 1; /*  Start of (first) argument */
       tokens_res->args_found = 1;
       tokens_res->op |= EQ;
 
-      DS_AT_MSG0_HIGH("***=***");
+      printf("***=***");
     }
 
     else if ( c == '?' && (tokens_res->op & (NA|AR)) == NA )
@@ -117,47 +157,150 @@ u8* parse_extended_command( u8* a_ptr, tokens_struct_type* tokens_res )
       tokens_res->arg[0] = working_ptr+1;   /*  Start of (first) argument */
       tokens_res->args_found = 1;
       tokens_res->op |= QU;
-      DS_AT_MSG0_HIGH("***?***");
+      printf("***?***");
     }
 
     else if ( c != ' ' && c != ';' && tokens_res->op > NA )
     {
       tokens_res->op |=AR;        /*  Argument (or comma) actually found  */
-      DS_AT_MSG0_HIGH("***arg or comma***");
+      printf("***arg or comma***");
     }
+    if ( c == ',' && (tokens_res->op & AR) )
+    {
+      *working_ptr = '\0';                /*  Terminate current argument  */
 
+       tokens_res->arg_length[tokens_res->args_found - 1] =
+                         working_ptr - tokens_res->arg[tokens_res->args_found - 1];
+
+      for(i=0; i<tokens_res->args_found; i++)
+      {
+        printf("tokens_res->arg_length[%d] = %d", i, tokens_res->arg_length[i]);
+      }
+
+      if(tokens_res->args_found)
+      {
+        printf("**trim_string**");
+        (void)trim_string(&tokens_res->arg [tokens_res->args_found-1]);
+      }
+      if ( tokens_res->args_found < MAX_ARG )
+      {
+        /*  Start of next arg */
+        tokens_res->arg [tokens_res->args_found] = working_ptr + 1;
+        ++tokens_res->args_found;
+        printf("**** *working_ptr = %c",*working_ptr);
+      }
+      else
+      {
+        printf("Number of parameters exceeded: %d",MAX_ARG);
+        result_code = DSAT_ERROR;
+        break;
+      }
+    }
+    #endif
     ++working_ptr;
     ++a_ptr;
+    printf("333\n");
   }
+  #if 1
+  if(tokens_res->op == (NA|EQ|AR))
+  {
+    tokens_res->arg_length[tokens_res->args_found - 1] = 
+                working_ptr - tokens_res->arg[tokens_res->args_found - 1];
+  }
+
+  *working_ptr = '\0';
+  tokens_res->end_of_line = working_ptr;
+
+  (void)trim_string(&tokens_res->name);
+  if (0 < tokens_res->args_found)
+  {
+     (void)trim_string(&tokens_res->arg [tokens_res->args_found-1]);
+  }
+
+  printf("token_res->name = %s,op = %d,args_found = %d\n",tokens_res->name,tokens_res->op,tokens_res->args_found);
+  for(i=0; i<tokens_res->args_found; i++)
+  {
+    printf("***0**tokens_res->arg[%d] = %s,arg_length = %d\n", i, tokens_res->arg[i],tokens_res->arg_length[i]);
+  }
+  
+  return a_ptr;
+  #endif
+  printf("end\n");
+  return NULL;
+}
+
+dsat_result_enum_type dsatpar_parse_cmd_line
+(
+  u8 *cmd_line                /*  NULL terminated command line with
+                                    "AT" prefix and <CR> removed. */
+)
+{
+  u8 *curr_char_ptr = NULL;
+
+  result_code = DSAT_OK;
+  curr_char_ptr = cmd_line;  
+ 
+  printf("000_000\n");
+  if(*curr_char_ptr == '+')
+  {
+    printf("000\n");
+    curr_char_ptr = parse_extended_command( curr_char_ptr, &token );
+    printf("000_111\n");
+  }
+  return result_code;
+}
+
+dsat_result_enum_type atcop_init(void)
+{
+  result_code = DSAT_OK;
+  
+  if(token_line == NULL)
+  {
+    token_line = (u8*)malloc(MAX_LINE_SIZE  );
+    if(token_line == NULL)
+    {
+      result_code = DSAT_ERROR;
+      return result_code;
+    }
+    memset(token_line, 0, MAX_LINE_SIZE);
+  }
+
+  token.working_at_line = token_line;
+
+  if(cmd_line == NULL)
+  {
+    cmd_line = (u8*)malloc(MAX_LINE_SIZE  );
+    if(cmd_line == NULL)
+    {
+      result_code = DSAT_ERROR;
+      return result_code;
+    }
+    memset(cmd_line, 0, MAX_LINE_SIZE);
+  }
+  return result_code;
+}
+static void process_at_cmd_line(char * cmd_line_ptr)
+{
+
 }
 
 
 int main()
 {
-  u8 *cmd_line = NULL;
-  u8 *curr_char_ptr = NULL;
   u8 cmd_size = 0;
-  u8 cmd_char = 0;
-  dsat_cmd_prep_state_enum_type at_cmd_prep_state = DSAT_CMD_PREP_STATE_HUNT;
-  tokens_struct_type token;
 
-  cmd_line = malloc(DSAT_MAX_LINE_SIZE);
-  if(cmd_line == NULL)
-    return 0;
+  atcop_init();
 
-  cmd_size = get_cmd_line(cmd_line);
-  printf("cmd_line = %s,cmd_size = %d\n",cmd_line,cmd_size);
+  
 
-  curr_char_ptr = cmd_line;
+  while(1)
+  {
+    cmd_size = get_cmd_line(cmd_line);
+    printf("cmd_line = \"%s\",cmd_size = %d\n",cmd_line,cmd_size);
 
-  while(*curr_char_ptr != '\0')
-	{
-    cmd_char = *curr_char_ptr++; 
-    if(*curr_char_ptr == '+')
-    {
-      parse_extended_command( curr_char_ptr, &token );
-    }
+    dsatpar_parse_cmd_line(cmd_line);
 
+    process_at_cmd_line(cmd_line);
   }
   return 0;
 }
