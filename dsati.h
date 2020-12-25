@@ -12,11 +12,16 @@
 #define TRUE  1
 #define FALSE 0
 
-//#define NULL ((void*)0)
+#define NA    1                 /*  Name field found      */
+#define EQ    2                 /*  <=> found             */
+#define QU    4                 /*  <?> found             */
+#define AR    8                 /*  Argument field found  */
+
 
 /***************************************************************************
 * Types
 ***************************************************************************/
+typedef unsigned char                     bool;
 typedef unsigned char                     u8;
 typedef signed char                       s8;
 typedef unsigned short                    u16;
@@ -30,21 +35,9 @@ typedef double                            f64;
 
 typedef enum
 {
-  /*-------------------------------------------------------------------------
-    Numbered per ITU-T V.25 ter
-  -------------------------------------------------------------------------*/
   DSAT_OK             = 0,    /*  AT: OK            */
-  DSAT_CONNECT        = 1,    /*  AT: CONNECT       */
-  DSAT_RING           = 2,    /*  AT: RING          */
-  DSAT_NO_CARRIER     = 3,    /*  AT: NO CARRIER    */
   DSAT_ERROR          = 4,    /*  AT: ERROR         */
-  DSAT_NO_DIALTONE    = 6,    /*  AT: NO DIAL TONE  */
-  DSAT_BUSY           = 7,    /*  AT: BUSY          */
-  DSAT_NO_ANSWER      = 8,    /*  AT: NO ANSWER     */
-  DSAT_DELAYED        = 9,   /* AT: Call Throttled */
-  DSAT_MAX_BASIC      = 10,   /*  End of basic result codes*/  
-
-  DSAT_CRC_CODE_VOICE = 31,  /* normal voice  */ 
+  DSAT_ASYNC_CMD      = -16,  /*  internal: async command in progress   */
 } dsat_result_enum_type;
 
 typedef enum
@@ -53,14 +46,6 @@ typedef enum
   DSAT_ONLINE_DATA,
   DSAT_ONLINE_CMD
 } dsat_mode_enum_type;
-
-
-typedef struct dsati_cmd_struct
-{
-  char *name;
-  dsat_result_enum_type (*proc_func)(void);
-} dsati_cmd_type;
-
 
 typedef struct
 {
@@ -73,10 +58,16 @@ typedef struct
   u16 args_found;
 } tokens_struct_type;
 
+typedef struct dsati_cmd_struct
+{
+  char *name;
+  dsat_result_enum_type (*proc_func)(tokens_struct_type *tok_ptr);
+} dsati_cmd_type;
+
 typedef struct
 {
-  const dsati_cmd_type *table_ptr;
-  const u16 *table_size;
+  dsati_cmd_type *table_ptr;
+  u16 *table_size;
 } dsati_at_cmd_table_entry_type;
 
 
